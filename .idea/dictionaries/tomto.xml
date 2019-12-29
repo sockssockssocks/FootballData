@@ -2,6 +2,7 @@
   <dictionary name="tomto">
     <words>
       <w>matchday</w>
+      <w>yyyy</w>
     </words>
   </dictionary>
 </component>
