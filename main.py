@@ -5,6 +5,7 @@ from sqlite3 import Error
 from datetime import date
 
 
+# Calls to the API with token. Returns the cherry-picked data to be sent to database.
 def make_request(api_token):
     print("Trying to get response.")
     try:
@@ -87,6 +88,7 @@ def main():
                                     number_of_goals integer
                                 );"""
 
+    # Not sure if this is needed, why can't I just have the code in the if.
     if database_connection is not None:
         create_table(database_connection, sql_create_scorer_table)
     else:
