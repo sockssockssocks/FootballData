@@ -12,20 +12,43 @@ def make_request(api_token):
         print("Response received.")
         connection = http.client.HTTPConnection('api.football-data.org')
         headers = {'X-Auth-Token': api_token}
-        connection.request('GET', '/v2/competitions/PL/', None, headers)
-        response = json.loads(connection.getresponse().read().decode())
+        #connection.request('GET', '/v2/competitions/PL/', None, headers)
+        #response = json.loads(connection.getresponse().read().decode())
 
+        '''
         league_id = response.get("id")
         current_season = response.get("currentSeason").get("id")
         current_matchday = response.get("currentSeason").get("currentMatchday")
 
         information = {league_id: league_id, current_season: current_season, current_matchday: current_matchday}
+        '''
 
-        return information
+        # Limited at 200 but this could change.
+        connection.request('GET', '/v2/competitions/PL/scorers?limit=200', None, headers)
+        response = json.loads(connection.getresponse().read().decode())
 
-        # connection.request('GET', '/v2/competitions/PL/scorers', None, headers)
-        # response = json.loads(connection.getresponse().read().decode())
-        # print(response)
+        top_scorers = []
+
+        # Iterate through the response and grab the player ID, player name, club ID, club name and number of goals.
+        # Creates a lists of lists.
+        for i in range(response.get("count")):
+            list_to_add = []
+
+            player_id = response.get("scorers")[i].get("player").get("id")
+            player_name = response.get("scorers")[i].get("player").get("name")
+            team_id = response.get("scorers")[i].get("team").get("id")
+            team_name = response.get("scorers")[i].get("team").get("name")
+            goals_scored = response.get("scorers")[i].get("numberOfGoals")
+
+            list_to_add.append(player_id)
+            list_to_add.append(player_name)
+            list_to_add.append(team_id)
+            list_to_add.append(team_name)
+            list_to_add.append(goals_scored)
+
+            top_scorers.append(list_to_add)
+
+        return top_scorers
 
     except http.client.CannotSendRequest:
         print("Error: Cannot send request.")
@@ -98,6 +121,9 @@ def update_top_scorer(connection, update_command):
 
 
 def main():
+    disclaimer = "Football data provided by the Football-Data.org API"
+    print(disclaimer)
+
     database = r"records.db"
     api_token = "c66e3100c2584065b0377dd86280ae81"
 
@@ -113,7 +139,7 @@ def main():
                                     number_of_goals integer
                                 );"""
 
-    # Not sure if this is needed, why can't I just have the code in the if.
+    # Opens connection to the database if one does not exist.
     if database_connection is not None:
         create_table(database_connection, sql_create_scorer_table)
     else:
@@ -129,18 +155,39 @@ def main():
     player_name = select_from_table(database_connection, sql_goals_scored_player_name)
     number_of_goals = select_from_table(database_connection, sql_goals_scored_number_of_goals)
 
-    # For debugging
-    for k in player_id:
-        print(player_name[k], " has scored ", number_of_goals[k])
+    # Output for debugging.
+    # for k in player_id:
+        # print(player_name[k], " has scored ", number_of_goals[k])
 
-    # Need to call the top_scorer table to get the number_of_goals
-    #sql_update_top_scorer_goals_scored = "UPDATE top_scorer SET ", number_of_goals, " = ", number_of_goals, " + ", matchday_goals
+    print("Sending request.")
+    request_received = make_request(api_token)
 
-    # print("Sending request.")
-    # request_received = make_request(api_token)
+    # Iterate of the nested list returned from call and create SQL command to update table.
+    # This doesn't work
+    # Might need to make this a list of tuples
+    for index, element in enumerate(request_received):
+        nested_item = request_received[index][element]
+        print(request_received[index][element])
+        sql_update = "UPDATE top_scorer SET player_id = ", request_received[index][element],\
+                        ", player_name = ", request_received[index][element],\
+                        ", player_club_id, ", request_received[index][element],\
+                        ", player_club_name, ", request_received[index][element],\
+                        ", number_of_goals, ", request_received[index][element], ";"
+        # update_top_scorer(database_connection, sql_update)
 
     # Closes connection as there's no need for it to be open anymore
     close_connection(database_connection)
+
+    ''' # Iterate of the nested list returned from call and create SQL command to update table.
+    for index in request_received:
+        for details in index:
+            print(details)
+            sql_update = "UPDATE top_scorer SET player_id = ", request_received[i][k],\
+                            ", player_name = ", request_received[i][k],\
+                            ", player_club_id, ", request_received[i][k],\
+                            ", player_club_name, ", request_received[i][k],\
+                            ", number_of_goals, ", request_received[i][k], ";"
+            # update_top_scorer(database_connection, sql_update)'''
 
 
 if __name__ == "__main__":
@@ -153,5 +200,29 @@ Start my own goalscorer tally:
 - will need to check if I need to write to the db in the first place.
 
 https://www.sqlitetutorial.net/sqlite-python/
+
+
+You shouldn't think of what you get as a "JSON object". What you have is a list. The list contains two dicts. The dicts
+contain various key/value pairs, all strings. When you do json_object[0], you're asking for the first dict in the list.
+When you iterate over that, with for song in json_object[0]:, you iterate over the keys of the dict. Because that's
+what you get when you iterate over the dict. If you want to access the value associated with the key in that dict, you
+would use, for example, json_object[0][song].
+
+'''
+'''
+GRAVEYARD:
+        # connection.request('GET', '/v2/competitions/PL/matches?timeFrame=n', None, headers)
+        # response = json.loads(connection.getresponse().read().decode())
+        # Ensures looking at the current season and matchday then looks for home team vs away team scores
+        # Integer doesn't behave as expected.
+        # Is this even needed? What's the point of it?
+        if current_season == response["matches"][10]["season"]["id"] and \
+                current_matchday == response["matches"][10]["season"]["currentMatchday"]:
+            print("Found current season and matchday:", current_season, "and", current_matchday)
+            print("Score:", response["matches"][21]["score"]["fullTime"])
+            print(response["matches"][21]["homeTeam"]["name"])
+            print(response["matches"][21]["awayTeam"]["name"])
+
+
 
 '''
