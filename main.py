@@ -55,19 +55,44 @@ def create_connection(db_file):
     return connection
 
 
-# Simply closes the passed connection.
+# Closes the passed connection.
 def close_connection(connection):
     if connection:
         connection.close()
         return print("Connection closed.")
 
 
-# Executes SQL command.
-def create_table(connection, create_table_sql):
+# Creates table if doesn't exist already.
+def create_table(connection, sql_create_table):
     try:
         c = connection.cursor()
-        c.execute(create_table_sql)
+        c.execute(sql_create_table)
         print("Table created.")
+    except Error as e:
+        print(e)
+
+
+# Returns the data of the SELECT command.
+def select_from_table(connection, select_command):
+    try:
+        c = connection.cursor()
+        c.execute(select_command)
+        data = c.fetchall()
+
+        # Converts the list of tuples returned to a list of integers
+        formatted_data = [item for t in data for item in t]
+        return formatted_data
+    except Error as e:
+        print(e)
+
+
+# Updates the top_scorer with the new total of goals.
+def update_top_scorer(connection, update_command):
+    print("In update_top_scorer")
+    try:
+        print("Attempting to execute command:", update_command)
+        c = connection.cursor()
+        c.execute(update_command)
     except Error as e:
         print(e)
 
@@ -94,19 +119,38 @@ def main():
     else:
         print("Error: Cannot create the database connection.")
 
-    #print("Sending request.")
-    #request_received = make_request(api_token)
+    # Can probably make this neater. Use lists and for loops?
+    # SELECT commands used to get dict of player_id and the corresponding number_of_goals
+    sql_goals_scored_player_id = "SELECT player_id FROM top_scorer;"
+    sql_goals_scored_player_name = "SELECT player_name FROM top_scorer;"
+    sql_goals_scored_number_of_goals = "SELECT number_of_goals FROM top_scorer;"
 
+    player_id = select_from_table(database_connection, sql_goals_scored_player_id)
+    player_name = select_from_table(database_connection, sql_goals_scored_player_name)
+    number_of_goals = select_from_table(database_connection, sql_goals_scored_number_of_goals)
+
+    # For debugging
+    for k in player_id:
+        print(player_name[k], " has scored ", number_of_goals[k])
+
+    # Need to call the top_scorer table to get the number_of_goals
+    #sql_update_top_scorer_goals_scored = "UPDATE top_scorer SET ", number_of_goals, " = ", number_of_goals, " + ", matchday_goals
+
+    # print("Sending request.")
+    # request_received = make_request(api_token)
+
+    # Closes connection as there's no need for it to be open anymore
     close_connection(database_connection)
 
 
 if __name__ == "__main__":
     main()
 
-
 '''
 
-Start my own goalscorer tally - need the data from API to do this.
+Start my own goalscorer tally:
+- create a call to the API that gets all matches played on current matchday and return playerIDs and numbers of goals scored.
+- will need to check if I need to write to the db in the first place.
 
 https://www.sqlitetutorial.net/sqlite-python/
 
