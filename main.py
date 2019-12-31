@@ -19,7 +19,6 @@ def make_request(api_token):
         league_id = response.get("id")
         current_season = response.get("currentSeason").get("id")
         current_matchday = response.get("currentSeason").get("currentMatchday")
-
         information = {league_id: league_id, current_season: current_season, current_matchday: current_matchday}
         '''
 
@@ -110,24 +109,35 @@ def select_from_table(connection, select_command):
 
 
 # Updates the top_scorer with the new total of goals.
-def update_top_scorer(connection, update_command):
-    print("In update_top_scorer")
+def update_top_scorer(connection, data):
     try:
-        print("Attempting to execute command:", update_command)
         c = connection.cursor()
-        c.execute(update_command)
+        c.executemany("""UPDATE top_scorer
+                        """)
+    except Error as e:
+        print(e)
+
+
+# Insert the scorers to the top_scorer database
+def insert_into_top_scorer(connection, data):
+    print(data)
+    try:
+        c = connection.cursor()
+        c.executemany("""INSERT INTO top_scorer 
+                        (player_id, player_name, player_club_id, player_club_name, number_of_goals)
+                        VALUES (?,?,?,?,?);""", data)
+        print(select_from_table(connection, "SELECT * FROM top_scorer"))
+        connection.commit()
     except Error as e:
         print(e)
 
 
 def main():
     disclaimer = "Football data provided by the Football-Data.org API"
-    print(disclaimer)
+    print(disclaimer, ". Data:", get_usable_date())
 
     database = r"records.db"
     api_token = "c66e3100c2584065b0377dd86280ae81"
-
-    print("Today's date:", get_usable_date())
 
     database_connection = create_connection(database)
 
@@ -138,6 +148,8 @@ def main():
                                     player_club_name text,
                                     number_of_goals integer
                                 );"""
+
+    print(select_from_table(database_connection, "SELECT * FROM top_scorer"))
 
     # Opens connection to the database if one does not exist.
     if database_connection is not None:
@@ -155,59 +167,30 @@ def main():
     player_name = select_from_table(database_connection, sql_goals_scored_player_name)
     number_of_goals = select_from_table(database_connection, sql_goals_scored_number_of_goals)
 
-    # Output for debugging.
-    # for k in player_id:
-        # print(player_name[k], " has scored ", number_of_goals[k])
-
     print("Sending request.")
     request_received = make_request(api_token)
 
-    # Iterate of the nested list returned from call and create SQL command to update table.
-    # This doesn't work
-    # Might need to make this a list of tuples
-    for index, element in enumerate(request_received):
-        nested_item = request_received[index][element]
-        print(request_received[index][element])
-        sql_update = "UPDATE top_scorer SET player_id = ", request_received[index][element],\
-                        ", player_name = ", request_received[index][element],\
-                        ", player_club_id, ", request_received[index][element],\
-                        ", player_club_name, ", request_received[index][element],\
-                        ", number_of_goals, ", request_received[index][element], ";"
-        # update_top_scorer(database_connection, sql_update)
+    insert_into_top_scorer(database_connection, request_received)
+
+    print(select_from_table(database_connection, "SELECT * FROM top_scorer"))
 
     # Closes connection as there's no need for it to be open anymore
     close_connection(database_connection)
-
-    ''' # Iterate of the nested list returned from call and create SQL command to update table.
-    for index in request_received:
-        for details in index:
-            print(details)
-            sql_update = "UPDATE top_scorer SET player_id = ", request_received[i][k],\
-                            ", player_name = ", request_received[i][k],\
-                            ", player_club_id, ", request_received[i][k],\
-                            ", player_club_name, ", request_received[i][k],\
-                            ", number_of_goals, ", request_received[i][k], ";"
-            # update_top_scorer(database_connection, sql_update)'''
 
 
 if __name__ == "__main__":
     main()
 
 '''
-
 Start my own goalscorer tally:
 - create a call to the API that gets all matches played on current matchday and return playerIDs and numbers of goals scored.
 - will need to check if I need to write to the db in the first place.
-
 https://www.sqlitetutorial.net/sqlite-python/
-
-
 You shouldn't think of what you get as a "JSON object". What you have is a list. The list contains two dicts. The dicts
 contain various key/value pairs, all strings. When you do json_object[0], you're asking for the first dict in the list.
 When you iterate over that, with for song in json_object[0]:, you iterate over the keys of the dict. Because that's
 what you get when you iterate over the dict. If you want to access the value associated with the key in that dict, you
 would use, for example, json_object[0][song].
-
 '''
 '''
 GRAVEYARD:
@@ -222,7 +205,4 @@ GRAVEYARD:
             print("Score:", response["matches"][21]["score"]["fullTime"])
             print(response["matches"][21]["homeTeam"]["name"])
             print(response["matches"][21]["awayTeam"]["name"])
-
-
-
 '''
