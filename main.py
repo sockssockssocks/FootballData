@@ -94,14 +94,14 @@ def create_table(connection, sql_create_table):
         print(e)
 
 
-# Returns the data of the SELECT command.
+# Returns data of the SELECT command.
+# Converts the list of tuples returned to a list of integers.
 def select_from_table(connection, select_command):
     try:
         c = connection.cursor()
         c.execute(select_command)
         data = c.fetchall()
 
-        # Converts the list of tuples returned to a list of integers
         formatted_data = [item for t in data for item in t]
         return formatted_data
     except Error as e:
@@ -109,24 +109,43 @@ def select_from_table(connection, select_command):
 
 
 # Updates the top_scorer with the new total of goals.
-def update_top_scorer(connection, data):
+def update_top_scorer(connection, data, player_id, number_of_goals):
     try:
         c = connection.cursor()
-        c.executemany("""UPDATE top_scorer
-                        """)
+
+        table_rows = c.rowcount
+        print("Rows in top_scorer:", table_rows)
+        print("Rows in data received:", len(data))
+
+        for i in player_id:
+            execute_command = "SELECT player_id, number_of_goals FROM top_scorer WHERE player_id=" + str(i) + ";"
+            c.execute(execute_command)
+            row_player_id = c.fetchall()
+            print(type(row_player_id))
+            print(row_player_id)
+
+            if row_player_id[i] ==
+
+        '''if table_rows == len(data):
+            for i in data:
+                row_player_id = c.execute("SELECT player_id, number_of_goals FROM top_scorer "
+                                          "WHERE player_id=", id_and_goals[i][0])
+                print(row_player_id)
+                #if row_player_id
+                #execute_string = "UPDATE top_scorer SET player_id=", data[i][0],\
+                                    #"player_name=", data[i][1],\
+        '''
+        #c.executemany("""UPDATE top_scorer SET player_id=?, player_name=?, player_club_id=?, player_club_name=?,
+                            #number_of_goals=? WHERE number_of_goals != """, id_and_goals, """); """, data)
     except Error as e:
         print(e)
 
 
-# Insert the scorers to the top_scorer database
+# Insert the scorers to the top_scorer database. If data exists it will not
 def insert_into_top_scorer(connection, data):
-    print(data)
     try:
         c = connection.cursor()
-        c.executemany("""INSERT INTO top_scorer 
-                        (player_id, player_name, player_club_id, player_club_name, number_of_goals)
-                        VALUES (?,?,?,?,?);""", data)
-        print(select_from_table(connection, "SELECT * FROM top_scorer"))
+        c.executemany("""INSERT INTO top_scorer VALUES (?,?,?,?,?);""", data)
         connection.commit()
     except Error as e:
         print(e)
@@ -163,23 +182,29 @@ def main():
     sql_goals_scored_player_name = "SELECT player_name FROM top_scorer;"
     sql_goals_scored_number_of_goals = "SELECT number_of_goals FROM top_scorer;"
 
-    player_id = select_from_table(database_connection, sql_goals_scored_player_id)
-    player_name = select_from_table(database_connection, sql_goals_scored_player_name)
-    number_of_goals = select_from_table(database_connection, sql_goals_scored_number_of_goals)
-
+    # Call to API via function
     print("Sending request.")
     request_received = make_request(api_token)
 
-    insert_into_top_scorer(database_connection, request_received)
+    # If table is empty, fill with new call. If not empty then update any rows that need updating.
+    # Need to check if number of rows in table is less, more or equal to the request received.
+    if not select_from_table(database_connection, "SELECT * FROM top_scorer"):
+        print("top_scorer is empty")
+        insert_into_top_scorer(database_connection, request_received)
+    else:
+        player_id = select_from_table(database_connection, sql_goals_scored_player_id)
+        number_of_goals = select_from_table(database_connection, sql_goals_scored_number_of_goals)
 
-    print(select_from_table(database_connection, "SELECT * FROM top_scorer"))
+        # Commits the received request to the database
+        update_top_scorer(database_connection, request_received, player_id, number_of_goals)
 
-    # Closes connection as there's no need for it to be open anymore
-    close_connection(database_connection)
+        # Closes connection as there's no need for it to be open anymore
+        close_connection(database_connection)
 
 
 if __name__ == "__main__":
     main()
+
 
 '''
 Start my own goalscorer tally:
