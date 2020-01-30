@@ -94,8 +94,7 @@ def create_table(connection, sql_create_table):
         print(e)
 
 
-# Returns data of the SELECT command.
-# Converts the list of tuples returned to a list of integers.
+# Returns data of the SELECT command. Converts the list of tuples returned to a list of integers.
 def select_from_table(connection, select_command):
     try:
         c = connection.cursor()
@@ -109,34 +108,35 @@ def select_from_table(connection, select_command):
 
 
 # Updates the top_scorer with the new total of goals.
+# Tries to UPDATE all so need to work on the conditioning
+# Also, should this loop through table_rows or data?
 def update_top_scorer(connection, data, player_id, number_of_goals):
     try:
         c = connection.cursor()
 
-        table_rows = c.rowcount
-        print("Rows in top_scorer:", table_rows)
-        print("Rows in data received:", len(data))
+        table_rows = c.execute("SELECT * FROM top_scorer").rowcount
+        table_rows = c.fetchall()
 
-        for i in player_id:
-            execute_command = "SELECT player_id, number_of_goals FROM top_scorer WHERE player_id=" + str(i) + ";"
+        # Iterates through the table, using a SELECT command for each row
+        for i, value in enumerate(table_rows):
+            execute_command = "SELECT player_id, number_of_goals FROM top_scorer WHERE player_id=" + str(value[0]) + ";"
             c.execute(execute_command)
-            row_player_id = c.fetchall()
-            print(type(row_player_id))
-            print(row_player_id)
+            row_player_id = [item for t in c.fetchall() for item in t]
 
-            if row_player_id[i] ==
+            # If player_id in the table matches the player_id in the request
+            if row_player_id[0] == value[0] in player_id and row_player_id[0] == value[0] in data[i]:
+                # If the number of goals scored in the table matches the request
+                if row_player_id[1] == value[4] in number_of_goals and row_player_id[1] == value[4] in data[4]:
+                    print("Goals are the same")
+                else:
+                    print("Goal mismatch:\n  In table:", row_player_id[1], "\n  In request:", data[i][4])
+                    execute_command = ("UPDATE top_scorer SET player_id=?, player_name=?, player_club_id=?,"
+                                        "player_club_name=?, number_of_goals=? WHERE player_id=" + str(row_player_id[0]))
+                    execute_command = "".join(str(execute_command))
+                    c.execute(execute_command, data[i])
+                    connection.commit()
+                    print("Committed UPDATE to top_scorer")
 
-        '''if table_rows == len(data):
-            for i in data:
-                row_player_id = c.execute("SELECT player_id, number_of_goals FROM top_scorer "
-                                          "WHERE player_id=", id_and_goals[i][0])
-                print(row_player_id)
-                #if row_player_id
-                #execute_string = "UPDATE top_scorer SET player_id=", data[i][0],\
-                                    #"player_name=", data[i][1],\
-        '''
-        #c.executemany("""UPDATE top_scorer SET player_id=?, player_name=?, player_club_id=?, player_club_name=?,
-                            #number_of_goals=? WHERE number_of_goals != """, id_and_goals, """); """, data)
     except Error as e:
         print(e)
 
@@ -152,8 +152,7 @@ def insert_into_top_scorer(connection, data):
 
 
 def main():
-    disclaimer = "Football data provided by the Football-Data.org API"
-    print(disclaimer, ". Data:", get_usable_date())
+    print("Football data provided by the Football-Data.org API. Date:", get_usable_date())
 
     database = r"records.db"
     api_token = "c66e3100c2584065b0377dd86280ae81"
@@ -168,7 +167,7 @@ def main():
                                     number_of_goals integer
                                 );"""
 
-    print(select_from_table(database_connection, "SELECT * FROM top_scorer"))
+    print("From top_scorer:", select_from_table(database_connection, "SELECT * FROM top_scorer"))
 
     # Opens connection to the database if one does not exist.
     if database_connection is not None:
@@ -185,6 +184,7 @@ def main():
     # Call to API via function
     print("Sending request.")
     request_received = make_request(api_token)
+    print("From request:", request_received)
 
     # If table is empty, fill with new call. If not empty then update any rows that need updating.
     # Need to check if number of rows in table is less, more or equal to the request received.
