@@ -2,7 +2,7 @@ import http.client
 import json
 import sqlite3
 import matplotlib.pyplot as plt
-from itertools import chain
+import numpy as np
 from sqlite3 import Error
 from datetime import date
 
@@ -169,23 +169,26 @@ def insert_into_top_scorer(connection, data):
 
 # Creates a bar chart of the top five scorers from any data given.
 # Needs work
-def plot_top_five_scorers(data, graph_title):
-    print(data)
+def plot_top_scorers(data, graph_title):
+    players = []
+    goals = []
+    positions = []
 
-    players = [data[1], data[7], data[13], data[19], data[25]]
-    goals = [data[4], data[10], data[16], data[22], data[28]]
-    positions = [data[5], data[11], data[17], data[23], data[29]]
+    # Populates the above lists with the data passed.
+    for i, value in enumerate(data):
+        players.append(data[i][0])
+        goals.append(int(data[i][1]))
+        positions.append(data[i][2])
 
-    # Shortens player's full names to just surnames
+    # Shortens player's full names to just surnames.
     for index, names in enumerate(players):
         players[index] = names[names.index(" "):]
 
-    # For loop without iterator which saves me from having to find the length of players
+    # For loop without iterator which saves me from having to find the length of players.
     x_pos = [i for i, _ in enumerate(players)]
 
     # Generates the colour of bars and the legend.
-    colors = []
-    legend = []
+    colors, legend = [], []
     for index, position in enumerate(positions):
         if positions[index] == "Attacker":
             colors.append("r")
@@ -207,7 +210,7 @@ def plot_top_five_scorers(data, graph_title):
 
     plt.ylabel("Goals Scored")
     plt.xlabel("Player Name")
-    plt.title("Top Five Goalscorers (" + graph_title + ") in Premier League")
+    plt.title("Top Goalscorers (" + graph_title + ") in Premier League")
     plt.legend(bars, legend)
 
     plt.xticks(x_pos, players)
@@ -246,43 +249,32 @@ def main():
     print("Sending request.")
     request_received = make_request(api_token)
 
-    # SELECT commands used to get dict of player_id and the corresponding number_of_goals
-    sql_goals_scored_player_id = "SELECT player_id FROM top_scorer;"
-    sql_goals_scored_number_of_goals = "SELECT number_of_goals FROM top_scorer;"
-
     # If table is empty, fill with new call. If not empty then update any rows that need updating
     if not select_from_table(database_connection, sql_select_all):
         print("top_scorer is empty")
         insert_into_top_scorer(database_connection, request_received) # TEST THIS ACTUALLY WORKS
         print("Table created with ", len(request_received), " rows.")
     else:
-        player_id = select_from_table(database_connection, sql_goals_scored_player_id)
-        number_of_goals = select_from_table(database_connection, sql_goals_scored_number_of_goals)
-
         # Commits the received request to the database
         update_top_scorer(database_connection, request_received)
 
-    '''top_scoring_attacker = (select_from_table(database_connection,
-                            "SELECT player_name, MAX (number_of_goals), player_position FROM top_scorer WHERE player_position='Attacker'"))
-    top_scoring_midfielder = (select_from_table(database_connection,
-                              "SELECT player_name, MAX (number_of_goals), player_position FROM top_scorer WHERE player_position='Midfielder'"))
-    top_scoring_defender = (select_from_table(database_connection,
-                            "SELECT player_name, MAX (number_of_goals), player_position FROM top_scorer WHERE player_position='Defender'"))'''
+    top_five_attackers = select_from_table(database_connection,
+                                           "SELECT player_name, number_of_goals, player_position FROM top_scorer "
+                                           "WHERE player_position='Attacker' ORDER BY number_of_goals DESC LIMIT 5")
 
-    '''top_scoring_in_position = [top_scoring_attacker, top_scoring_midfielder, top_scoring_defender]
-    top_scoring_in_position = list(chain.from_iterable(top_scoring_in_position))'''
+    top_five_midfielders = select_from_table(database_connection,
+                                             "SELECT player_name, number_of_goals, player_position FROM top_scorer "
+                                             "WHERE player_position='Midfielder' ORDER BY number_of_goals DESC LIMIT 5")
 
-    '''plot_top_five_scorers(select_from_table(database_connection, sql_select_all), "All Positions")
-    plot_top_five_scorers(select_from_table(database_connection,
-                                            "SELECT * FROM top_scorer WHERE player_position='Attacker'"),
-                          "Attackers")
-    plot_top_five_scorers(select_from_table(database_connection,
-                                            "SELECT * FROM top_scorer WHERE player_position='Midfielder'"),
-                          "Midfielders")
-    plot_top_five_scorers(select_from_table(database_connection,
-                                            "SELECT * FROM top_scorer WHERE player_position='Defender'"),
-                          "Defenders")
-    # plot_top_five_scorers(top_scoring_in_position, "In Each Position")'''
+    top_five_defenders = select_from_table(database_connection,
+                                           "SELECT player_name, number_of_goals, player_position FROM top_scorer "
+                                           "WHERE player_position='Defender' ORDER BY number_of_goals DESC LIMIT 5")
+
+    plot_top_scorers(np.array(top_five_attackers).reshape(-1, 3), "Attackers")
+    plot_top_scorers(np.array(top_five_midfielders).reshape(-1, 3), "Midfielders")
+    plot_top_scorers(np.array(top_five_defenders).reshape(-1, 3), "Defenders")
+    top_scoring_in_position = [top_five_attackers[0:3], top_five_midfielders[0:3], top_five_defenders[0:3]]
+    plot_top_scorers(top_scoring_in_position, "In Each Position")
 
     close_connection(database_connection)
 
@@ -291,6 +283,17 @@ if __name__ == "__main__":
     main()
 
 '''
+Get the plots working without static indices.
+
+What to do on plots when there are more than one player with the number of goals. Might need dict to do this because
+can't sort by number_of_goals AND alphabetical player_name.
+
+
+STATE OF PLAY:
+plotting works best when there's a nested list passed as the data so I don't need to specify the indices.
+need to find a way to convert the lists to nested lists.
+
+
 Start my own goalscorer tally:
 - add a table per game week so I can see averages etc.
 - call the API and work out number of goals scored per country
