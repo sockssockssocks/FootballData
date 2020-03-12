@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from sqlite3 import Error
 from datetime import date
+from sklearn.linear_model import LinearRegression
 
 
 # Calls to the API with token. Returns the cherry-picked data to be sent to database.
@@ -17,7 +18,7 @@ def make_request(api_token):
         connection.request('GET', '/v2/competitions/PL/', None, headers)
         response = json.loads(connection.getresponse().read().decode())
 
-        league_id = response.get("name")
+        league_id = response.get("id")
         current_season = response.get("currentSeason").get("id")
         current_matchday = response.get("currentSeason").get("currentMatchday")
         last_updated = response.get("lastUpdated")
@@ -107,7 +108,6 @@ def select_from_table(connection, select_command):
         formatted_data = [item for t in data for item in t]
 
         if not formatted_data:
-            print("Nothing returned from query")
             return False
         else:
             return formatted_data
@@ -161,7 +161,7 @@ def update_top_scorer(connection, data):
 def insert_into_top_scorer(connection, data):
     try:
         c = connection.cursor()
-        c.execute("""INSERT INTO top_scorer VALUES (?,?,?,?,?,?);""", data)
+        c.executemany("""INSERT INTO top_scorer VALUES (?,?,?,?,?,?);""", data)
         connection.commit()
     except Error as e:
         print(e)
@@ -252,7 +252,7 @@ def main():
     # If table is empty, fill with new call. If not empty then update any rows that need updating
     if not select_from_table(database_connection, sql_select_all):
         print("top_scorer is empty")
-        insert_into_top_scorer(database_connection, request_received) # TEST THIS ACTUALLY WORKS
+        insert_into_top_scorer(database_connection, request_received)
         print("Table created with ", len(request_received), " rows.")
     else:
         # Commits the received request to the database
@@ -285,14 +285,17 @@ if __name__ == "__main__":
 '''
 Get the plots working without static indices.
 
+Get rid of "Table created." message when table already exists
+
 What to do on plots when there are more than one player with the number of goals. Might need dict to do this because
 can't sort by number_of_goals AND alphabetical player_name.
 
+Do the same for assists as well.
 
-STATE OF PLAY:
-plotting works best when there's a nested list passed as the data so I don't need to specify the indices.
-need to find a way to convert the lists to nested lists.
-
+Linear Regression:
+- number of goals scored on y axis
+- what should be on x? clubs?
+- https://towardsdatascience.com/linear-regression-in-6-lines-of-python-5e1d0cd05b8d
 
 Start my own goalscorer tally:
 - add a table per game week so I can see averages etc.
@@ -301,10 +304,5 @@ Start my own goalscorer tally:
 Create a table for each player with over 3 goals to store when they were scored. Can make graphs from that.
 
 Could you connection.rollback() in excepts
-
-'''
-
-'''
-GRAVEYARD:
 
 '''
