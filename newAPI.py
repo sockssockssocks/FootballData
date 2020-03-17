@@ -271,6 +271,8 @@ def main():
 
     close_connection(database_connection)
 
+    print("Programme complete.")
+
 
 if __name__ == "__main__":
     main()
