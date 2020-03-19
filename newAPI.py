@@ -25,9 +25,12 @@ def current_premier_league_season():
     for i, values in enumerate(response.get("api").get("leagues")):
         league_id = response.get("api").get("leagues")[i].get("league_id")
         league_name = response.get("api").get("leagues")[i].get("name")
+        season_start = response.get("api").get("leagues")[i].get("season_start")
+        season_end = response.get("api").get("leagues")[i].get("season_end")
 
         list_of_leagues.append(league_id)
         list_of_leagues.append(league_name)
+        list_of_leagues.append(season_start.split("-")[0] + "-" + season_end.split("-")[0])
 
         if "Premier League" in list_of_leagues:
             return str(list_of_leagues[i])
@@ -38,55 +41,107 @@ def current_premier_league_season():
 # Breaks the JSON request into a list of lists for each player which is returned at the end for this method.
 # Line breaks indicate different sections of the JSON.
 def request_player_data(team_id, season_id):
-    api_connection.request("GET", ("/v2/players/player/" + team_id + "/" + season_id), headers=headers)
+    api_connection.request("GET", ("/v2/players/team/" + str(team_id) + "/" + str(season_id)), headers=headers)
     response = json.loads(api_connection.getresponse().read().decode())
 
     player_data = []
     for i, values in enumerate(response.get("api").get("players")):
         list_to_add = []
 
-        player_id = response.get("api").get("players")[i].get("player_id")
-        player_name = response.get("api").get("players")[i].get("player_name")
-        player_position = response.get("api").get("players")[i].get("position")
-        team_id = response.get("api").get("players")[i].get("team_id")
-        team_name = response.get("api").get("players")[i].get("team_name")
+        if response.get("api").get("players")[i].get("league") == "Premier League":
+            player_id = response.get("api").get("players")[i].get("player_id")
+            player_name = response.get("api").get("players")[i].get("player_name")
+            player_position = response.get("api").get("players")[i].get("position")
+            player_birth_date = response.get("api").get("players")[i].get("birth_date")
+            player_nationality = response.get("api").get("players")[i].get("nationality")
+            player_height = response.get("api").get("players")[i].get("height")
+            player_weight = response.get("api").get("players")[i].get("weight")
+            team_id = response.get("api").get("players")[i].get("team_id")
+            team_name = response.get("api").get("players")[i].get("team_name")
 
-        player_appearances = response.get("api").get("players")[i].get("games").get("appearances")
-        player_minutes_played = response.get("api").get("players")[i].get("games").get("minutes_played")
+            player_appearances = response.get("api").get("players")[i].get("games").get("appearences")
+            player_minutes_played = response.get("api").get("players")[i].get("games").get("minutes_played")
 
-        player_number_of_goals = response.get("api").get("players")[i].get("goals").get("total")
-        player_number_of_assists = response.get("api").get("players")[i].get("goals").get("assists")
+            player_number_of_goals = response.get("api").get("players")[i].get("goals").get("total")
+            player_number_of_assists = response.get("api").get("players")[i].get("goals").get("assists")
 
-        player_total_shots = response.get("api").get("players")[i].get("shots").get("total")
-        player_shot_on_target = response.get("api").get("players")[i].get("shots").get("on")
+            player_number_of_passes = response.get("api").get("players")[i].get("passes").get("total")
+            player_number_of_key_passes = response.get("api").get("players")[i].get("passes").get("key")
+            player_passing_accuracy = response.get("api").get("players")[i].get("passes").get("accuracy")
 
-        player_penalties_won = response.get("api").get("players")[i].get("penalty").get("won")
-        player_penalties_scored = response.get("api").get("players")[i].get("penalty").get("success")
-        player_penalties_missed = response.get("api").get("players")[i].get("penalty").get("missed")
-        player_penalties_saved = response.get("api").get("players")[i].get("penalty").get("saved")
+            player_total_tackles = response.get("api").get("players")[i].get("tackles").get("total")
+            player_total_blocks = response.get("api").get("players")[i].get("tackles").get("blocks")
+            player_total_interceptions = response.get("api").get("players")[i].get("tackles").get("interceptions")
 
-        list_to_add.append(player_id)
-        list_to_add.append(player_name)
-        list_to_add.append(player_position)
-        list_to_add.append(team_id)
-        list_to_add.append(team_name)
+            player_total_duels = response.get("api").get("players")[i].get("duels").get("total")
+            player_duels_won = response.get("api").get("players")[i].get("duels").get("won")
 
-        list_to_add.append(player_appearances)
-        list_to_add.append(player_minutes_played)
+            player_dribble_attempts = response.get("api").get("players")[i].get("dribbles").get("attempts")
+            player_dribble_success = response.get("api").get("players")[i].get("dribbles").get("success")
 
-        list_to_add.append(player_number_of_goals)
-        list_to_add.append(player_number_of_assists)
+            player_fouls_drawn = response.get("api").get("players")[i].get("fouls").get("drawn")
+            player_fouls_committed = response.get("api").get("players")[i].get("fouls").get("committed")
 
-        list_to_add.append(player_total_shots)
-        list_to_add.append(player_shot_on_target)
+            player_yellow_cards = response.get("api").get("players")[i].get("cards").get("yellow")
+            player_second_yellow_cards = response.get("api").get("players")[i].get("cards").get("yellowred")
+            player_red_cards = response.get("api").get("players")[i].get("cards").get("red")
 
-        list_to_add.append(player_penalties_won)
-        list_to_add.append(player_penalties_scored)
-        list_to_add.append(player_penalties_missed)
-        list_to_add.append(player_penalties_saved)
+            player_total_shots = response.get("api").get("players")[i].get("shots").get("total")
+            player_shot_on_target = response.get("api").get("players")[i].get("shots").get("on")
 
-        player_data.append(list_to_add)
+            player_penalties_won = response.get("api").get("players")[i].get("penalty").get("won")
+            player_penalties_scored = response.get("api").get("players")[i].get("penalty").get("success")
+            player_penalties_missed = response.get("api").get("players")[i].get("penalty").get("missed")
+            player_penalties_saved = response.get("api").get("players")[i].get("penalty").get("saved")
 
+            list_to_add.append(player_id)
+            list_to_add.append(player_name)
+            list_to_add.append(player_position)
+            list_to_add.append(player_birth_date)
+            list_to_add.append(player_nationality)
+            list_to_add.append(player_height)
+            list_to_add.append(player_weight)
+            list_to_add.append(team_id)
+            list_to_add.append(team_name)
+
+            list_to_add.append(player_appearances)
+            list_to_add.append(player_minutes_played)
+
+            list_to_add.append(player_number_of_goals)
+            list_to_add.append(player_number_of_assists)
+
+            list_to_add.append(player_number_of_passes)
+            list_to_add.append(player_number_of_key_passes)
+            list_to_add.append(player_passing_accuracy)
+
+            list_to_add.append(player_total_tackles)
+            list_to_add.append(player_total_blocks)
+            list_to_add.append(player_total_interceptions)
+
+            list_to_add.append(player_total_duels)
+            list_to_add.append(player_duels_won)
+
+            list_to_add.append(player_dribble_attempts)
+            list_to_add.append(player_dribble_success)
+
+            list_to_add.append(player_fouls_drawn)
+            list_to_add.append(player_fouls_committed)
+
+            list_to_add.append(player_yellow_cards)
+            list_to_add.append(player_second_yellow_cards)
+            list_to_add.append(player_red_cards)
+
+            list_to_add.append(player_total_shots)
+            list_to_add.append(player_shot_on_target)
+
+            list_to_add.append(player_penalties_won)
+            list_to_add.append(player_penalties_scored)
+            list_to_add.append(player_penalties_missed)
+            list_to_add.append(player_penalties_saved)
+
+            player_data.append(list_to_add)
+
+    print(player_data)
     return player_data
 
 
@@ -222,6 +277,8 @@ def check_table_exists(database_connection, table_name, sql_creation_command):
     if (table_name + current_premier_league_season()) not in get_table_names(database_connection):
         create_table(database_connection, sql_creation_command)
         print("Table " + table_name + " has been created")
+    else:
+        print("Table " + table_name + "exists.")
 
 
 def main():
@@ -265,9 +322,10 @@ def main():
         # team_ids = request_league_season(current_premier_league_season())
         insert_into_table(database_connection, ("team_ids_" + current_premier_league_season()), team_ids)
 
+    int_season = int(current_premier_league_season())
+
     if check_table_empty(select_from_table(database_connection, ("SELECT * FROM " + desired_table_list[1]))):
-        player_data = request_player_data(int(current_premier_league_season()))
-        print(player_data)
+        player_data = request_player_data(40, "2019-2020")
 
     close_connection(database_connection)
 
